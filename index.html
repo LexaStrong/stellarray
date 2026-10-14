@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design Stack Roadmap | Interface Engineering Path</title>
+  <meta name="description" content="A comprehensive, progressive roadmap across Figma, Framer, Spline, and Stitch. 4 tools, 5 subsections each, 20 stages with 200 questions. Each section pops up only when one is completed.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- Top Navigation Bar -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">L</span>
+      <span>Design Stack Path</span>
+    </div>
+    <div class="progress-wrap" aria-label="Course progress">
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <span class="progress-label" id="progress-label">0 of 20 passed</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: var(--s2);">
+      <button class="btn ghost icon" id="reset-cache-btn" type="button" aria-label="Reset cached progress" title="Reset cached progress">
+        <i data-lucide="rotate-ccw"></i>
+      </button>
+      <button class="btn ghost icon" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+        <i data-lucide="moon"></i>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Hero Section with Cursor Following Beam -->
+<section class="hero" id="hero">
+  <div class="beam" id="beam" aria-hidden="true"></div>
+  <div class="container">
+    <div class="hero-inner reveal">
+      <span class="badge"><i data-lucide="layers"></i> 4 Tools · 5 Subsections Each · 20 Stages · 200 Questions</span>
+      <h1>Design, prototype, animate and ship with Figma, Framer, Spline and Stitch, <span class="serif">in order</span>.</h1>
+      <p class="lead">A complete yet simplified curriculum structured into 5 technical subsections per tool. Each subsection provides verified shortcuts, tricks, dos &amp; don'ts, architectural illustrations, and a 10-question checkpoint. Progress is automatically cached in your browser. Each section pops up only when the prior one is completed.</p>
+      <div class="hero-actions">
+        <button class="btn primary" type="button" id="start-btn"><i data-lucide="arrow-right"></i> Start Stage 1</button>
+      </div>
+    </div>
+
+    <!-- Value Grid -->
+    <div class="value-grid">
+      <article class="value reveal">
+        <div class="icon-box"><i data-lucide="list-ordered"></i></div>
+        <h3>20 Stages, 5 per tool</h3>
+        <p>Each tool features 5 deep technical subsections: moving from primitives and constraints to production deployment.</p>
+      </article>
+      <article class="value reveal">
+        <div class="icon-box"><i data-lucide="shield-check"></i></div>
+        <h3>10 Questions per checkpoint</h3>
+        <p>200 questions across the curriculum. Answer one at a time with instant feedback; clearing all 10 pops up the next stage.</p>
+      </article>
+      <article class="value reveal">
+        <div class="icon-box"><i data-lucide="database"></i></div>
+        <h3>Persistent local caching</h3>
+        <p>Your question progress and stage unlock states are automatically cached locally so you can resume anytime without losing work.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- Main Course Container -->
+<main class="container course" id="course">
+  <aside class="sidebar" aria-label="Stages">
+    <div id="stage-list"></div>
+  </aside>
+  <div id="main" aria-live="polite"></div>
+</main>
+
+<!-- Popup Celebration Modal (Fires when a section is completed) -->
+<div id="popup-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-card">
+    <div class="badge"><i data-lucide="sparkles"></i> <span id="modal-badge-text">Checkpoint Complete (10/10)</span></div>
+    <h3 id="modal-title">New Stage Popped Up!</h3>
+    <p id="modal-desc">Stage 2 is now unlocked and available in your roadmap.</p>
+    <div class="modal-actions">
+      <button class="btn primary" id="modal-action-btn" type="button">Continue to Next Stage <i data-lucide="arrow-right"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="container">
+    Shortcuts, menus and feature names verified for Figma, Framer, Spline, and Stitch. Progress is cached locally in your browser storage.
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.383.0/dist/umd/lucide.min.js"></script>
+<script src="js/stages.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
