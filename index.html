@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Design Stack Roadmap | Interface Engineering Path</title>
-  <meta name="description" content="A comprehensive, progressive roadmap across Figma, Framer, Spline, and Stitch. 4 tools, 5 subsections each, 20 stages with 200 questions. Each section pops up only when one is completed.">
+  <title>Stellarray | Interface Engineering & Product Design Roadmap</title>
+  <meta name="description" content="A comprehensive, progressive curriculum across Figma, Framer, Spline, and Stitch. 4 tools, 5 subsections each, 20 stages with 200 questions.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
@@ -16,19 +16,34 @@
 <header class="topbar">
   <div class="topbar-inner">
     <div class="brand">
-      <span class="brand-mark" aria-hidden="true">L</span>
-      <span>Design Stack Path</span>
+      <span class="brand-mark" aria-hidden="true">S</span>
+      <span>Stellarray</span>
     </div>
+
     <div class="progress-wrap" aria-label="Course progress">
       <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
       <span class="progress-label" id="progress-label">0 of 20 passed</span>
     </div>
+
     <div style="display: flex; align-items: center; gap: var(--s2);">
+      <button class="btn ghost icon" id="search-toggle-btn" type="button" aria-label="Search roadmap" title="Search shortcuts & tricks (⌘K)">
+        <i data-lucide="search"></i>
+      </button>
+
+      <button class="btn ghost icon" id="sound-toggle-btn" type="button" aria-label="Toggle audio feedback" title="Audio Feedback: On">
+        <i data-lucide="volume-2"></i>
+      </button>
+
       <button class="btn ghost icon" id="reset-cache-btn" type="button" aria-label="Reset cached progress" title="Reset cached progress">
         <i data-lucide="rotate-ccw"></i>
       </button>
+
       <button class="btn ghost icon" id="theme-toggle" type="button" aria-label="Toggle dark mode">
         <i data-lucide="moon"></i>
+      </button>
+
+      <button class="btn primary" id="view-cert-btn" type="button" style="display: none; padding: var(--s2) var(--s4); font-size: var(--fs-xs);">
+        <i data-lucide="award"></i> Certificate
       </button>
     </div>
   </div>
@@ -44,6 +59,7 @@
       <p class="lead">A complete yet simplified curriculum structured into 5 technical subsections per tool. Each subsection provides verified shortcuts, tricks, dos &amp; don'ts, architectural illustrations, and a 10-question checkpoint. Progress is automatically cached in your browser. Each section pops up only when the prior one is completed.</p>
       <div class="hero-actions">
         <button class="btn primary" type="button" id="start-btn"><i data-lucide="arrow-right"></i> Start Stage 1</button>
+        <button class="btn ghost" type="button" id="hero-cmd-btn"><i data-lucide="command"></i> Search Directory (<kbd>⌘K</kbd>)</button>
       </div>
     </div>
 
@@ -57,7 +73,7 @@
       <article class="value reveal">
         <div class="icon-box"><i data-lucide="shield-check"></i></div>
         <h3>10 Questions per checkpoint</h3>
-        <p>200 questions across the curriculum. Answer one at a time with instant feedback; clearing all 10 pops up the next stage.</p>
+        <p>200 questions across the curriculum. Answer using keys <kbd>1</kbd>–<kbd>4</kbd> with instant feedback; clearing all 10 pops up the next stage.</p>
       </article>
       <article class="value reveal">
         <div class="icon-box"><i data-lucide="database"></i></div>
@@ -88,10 +104,51 @@
   </div>
 </div>
 
+<!-- Global Command Palette Search Drawer (⌘K) -->
+<div id="search-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-label="Command search">
+  <div class="modal-card cmd-box">
+    <div class="cmd-header">
+      <i data-lucide="search"></i>
+      <input type="text" id="cmd-search-input" class="cmd-input" placeholder="Search shortcuts, tricks, concepts across all 20 stages (e.g. auto layout, orbit, matcap)..." autocomplete="off">
+      <kbd>ESC</kbd>
+    </div>
+    <div id="cmd-results" class="cmd-results">
+      <!-- Injected dynamically by app.js -->
+    </div>
+  </div>
+</div>
+
+<!-- Printable Certificate of Mastery Modal -->
+<div id="certificate-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-label="Certificate of Mastery">
+  <div class="cert-box">
+    <div class="cert-seal">★</div>
+    <span class="cert-badge">Official Verification of Completion</span>
+    <h2 class="cert-title">Certificate of Interface Engineering</h2>
+    <p class="cert-lead">This document certifies verified mastery of the complete modern product design and frontend publishing pipeline.</p>
+    
+    <input type="text" id="cert-recipient-name" class="cert-name-input" value="Product Designer & Engineer" title="Click to customize name">
+    
+    <div class="cert-skills">
+      <span class="cert-pill">✓ Figma Design Systems</span>
+      <span class="cert-pill">✓ Framer React Publishing</span>
+      <span class="cert-pill">✓ Spline WebGL 3D</span>
+      <span class="cert-pill">✓ Stitch Generative UI</span>
+    </div>
+
+    <div class="cert-date" id="cert-completion-date">Issued on October 2026 · Verified via 200/200 Checkpoints Passed</div>
+
+    <div class="modal-actions" style="margin-top: var(--s4);">
+      <button class="btn primary" id="cert-print-btn" type="button"><i data-lucide="printer"></i> Print / Save as PDF</button>
+      <button class="btn ghost" id="cert-close-btn" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Footer -->
 <footer class="footer">
-  <div class="container">
-    Shortcuts, menus and feature names verified for Figma, Framer, Spline, and Stitch. Progress is cached locally in your browser storage.
+  <div class="container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--s3);">
+    <span>Shortcuts, menus and feature names verified for Figma, Framer, Spline, and Stitch. Progress cached locally.</span>
+    <span>Press <kbd>⌘K</kbd> to search directory · Keys <kbd>1</kbd>–<kbd>4</kbd> for quiz choices</span>
   </div>
 </footer>
 

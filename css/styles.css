@@ -1,5 +1,6 @@
 /* Design Stack Roadmap: styles
-   Implements exact design and layout tokens, components, light/dark themes, and stage popup mechanics. */
+   Implements exact design and layout tokens, components, light/dark themes, stage popup mechanics,
+   command palette search drawer, keyboard badges, and printable certificate of mastery. */
 
 /* ---------- Tokens ---------- */
 :root {
@@ -151,7 +152,7 @@ svg.lucide, i[data-lucide] svg { width: 18px; height: 18px; flex-shrink: 0; }
   place-items: center;
   font-weight: 700;
 }
-.progress-wrap { flex: 1; max-width: 340px; display: flex; align-items: center; gap: var(--s3); }
+.progress-wrap { flex: 1; max-width: 320px; display: flex; align-items: center; gap: var(--s3); }
 .progress-track { flex: 1; height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
 .progress-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.4s ease; }
 .progress-label { font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; }
@@ -224,7 +225,7 @@ svg.lucide, i[data-lucide] svg { width: 18px; height: 18px; flex-shrink: 0; }
 /* ---------- Course layout ---------- */
 .course {
   display: grid;
-  grid-template-columns: 290px 1fr;
+  grid-template-columns: 310px 1fr;
   gap: var(--s6);
   padding: var(--s7) 0 var(--s8);
   align-items: start;
@@ -235,6 +236,9 @@ svg.lucide, i[data-lucide] svg { width: 18px; height: 18px; flex-shrink: 0; }
   display: flex;
   flex-direction: column;
   gap: var(--s5);
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  padding-right: var(--s2);
 }
 .tool-group { display: flex; flex-direction: column; gap: var(--s1); }
 .tool-group-title {
@@ -390,6 +394,18 @@ svg.lucide, i[data-lucide] svg { width: 18px; height: 18px; flex-shrink: 0; }
   border: 1px solid var(--line); border-radius: var(--r-sm);
   padding: var(--s3) var(--s4); min-height: 44px; cursor: pointer;
   transition: opacity 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s3);
+}
+.choice-key {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--raised);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  flex-shrink: 0;
 }
 .choice:hover:not(:disabled) { opacity: 0.8; border-color: var(--muted); }
 .choice:disabled { cursor: default; }
@@ -406,7 +422,7 @@ svg.lucide, i[data-lucide] svg { width: 18px; height: 18px; flex-shrink: 0; }
   padding-top: var(--s4); border-top: 1px solid var(--line);
 }
 
-/* ---------- Popup Section Reveal Modal ---------- */
+/* ---------- Popup Modals (Generic Backdrop) ---------- */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -426,7 +442,7 @@ svg.lucide, i[data-lucide] svg { width: 18px; height: 18px; flex-shrink: 0; }
   border: 1px solid var(--line);
   border-radius: var(--r);
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.25);
-  max-width: 500px;
+  max-width: 520px;
   width: 100%;
   padding: var(--s6);
   display: flex;
@@ -440,7 +456,6 @@ svg.lucide, i[data-lucide] svg { width: 18px; height: 18px; flex-shrink: 0; }
   from { opacity: 0; transform: translateY(16px) scale(0.95); }
   to { opacity: 1; transform: none; }
 }
-
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -449,6 +464,142 @@ svg.lucide, i[data-lucide] svg { width: 18px; height: 18px; flex-shrink: 0; }
 .modal-card h3 { font-size: var(--fs-xl); }
 .modal-card p { color: var(--muted); font-size: var(--fs-md); line-height: 1.5; }
 .modal-actions { display: flex; gap: var(--s3); margin-top: var(--s2); }
+
+/* ---------- Global Command Palette (⌘K) ---------- */
+.cmd-box {
+  max-width: 640px;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  max-height: 80vh;
+}
+.cmd-header {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.cmd-header i[data-lucide] { color: var(--muted); }
+.cmd-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font: inherit;
+  font-size: var(--fs-base);
+  color: var(--ink);
+  outline: none;
+}
+.cmd-results {
+  max-height: 420px;
+  overflow-y: auto;
+  padding: var(--s3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.cmd-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s4);
+  padding: var(--s3) var(--s4);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.cmd-item:hover, .cmd-item.selected {
+  background: var(--raised);
+  border-color: var(--line);
+}
+.cmd-item-title { font-weight: 600; font-size: var(--fs-sm); color: var(--ink); }
+.cmd-item-desc { font-size: var(--fs-xs); color: var(--muted); line-height: 1.4; margin-top: 2px; }
+.cmd-item-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: var(--accent-soft); color: var(--accent-ink); flex-shrink: 0; }
+
+/* ---------- Printable Certificate of Mastery ---------- */
+.cert-box {
+  max-width: 720px;
+  width: 100%;
+  background: var(--surface);
+  border: 8px solid var(--line);
+  outline: 2px solid var(--accent);
+  outline-offset: -12px;
+  padding: var(--s8) var(--s6);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s4);
+  position: relative;
+}
+.cert-badge { font-size: 13px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); }
+.cert-title { font-size: var(--fs-2xl); font-family: var(--font-display); font-weight: 700; }
+.cert-lead { font-size: var(--fs-base); color: var(--muted); max-width: 520px; }
+.cert-name-input {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  text-align: center;
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  border-bottom: 2px dashed var(--line);
+  padding: var(--s2) var(--s4);
+  width: 80%;
+  outline: none;
+}
+.cert-skills {
+  display: flex;
+  gap: var(--s3);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: var(--s3) 0;
+}
+.cert-pill {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: var(--s1) var(--s3);
+  border-radius: 99px;
+  background: var(--ok-soft);
+  color: var(--ok);
+  border: 1px solid var(--ok);
+}
+.cert-seal {
+  width: 64px; height: 64px; border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: grid; place-items: center;
+  font-size: 24px;
+}
+.cert-date { font-size: var(--fs-xs); color: var(--muted); }
+
+/* Print Styles */
+@media print {
+  body * { visibility: hidden; }
+  #certificate-modal, #certificate-modal * { visibility: visible; }
+  #certificate-modal {
+    position: fixed;
+    inset: 0;
+    background: #FFFFFF !important;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cert-box {
+    border: 8px solid #E3E0D7 !important;
+    outline: 2px solid #B4472D !important;
+    box-shadow: none !important;
+    color: #15171A !important;
+    background: #FFFFFF !important;
+  }
+  .modal-actions { display: none !important; }
+}
 
 /* ---------- Footer ---------- */
 .footer {
@@ -469,7 +620,7 @@ svg.lucide, i[data-lucide] svg { width: 18px; height: 18px; flex-shrink: 0; }
 /* ---------- Responsive ---------- */
 @media (max-width: 900px) {
   .course { grid-template-columns: 1fr; }
-  .sidebar { position: static; }
+  .sidebar { position: static; max-height: none; }
   .value-grid { grid-template-columns: 1fr; }
   .split { grid-template-columns: 1fr; }
   .progress-wrap { max-width: 180px; }

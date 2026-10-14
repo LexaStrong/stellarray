@@ -1,7 +1,14 @@
 /* Design Stack Roadmap: Application Logic
    20 Stages (4 tools x 5 subsections), 200 Questions (10 per stage).
-   Features progressive stage pop-up reveals, full localStorage caching,
-   one-at-a-time checkpoint questions, celebration modals, and theme switching. */
+   Features:
+   - Progressive stage pop-up reveals
+   - Full localStorage caching
+   - Keyboard-driven quiz inputs (Keys 1-4, A-D, Arrows)
+   - Native Web Audio API sound synthesis
+   - Global Command Palette Search Drawer (⌘K / Ctrl+K)
+   - Printable Certificate of Mastery
+   - Dual theme engine
+*/
 
 const TOTAL = STAGES.length; // 20
 
@@ -12,8 +19,82 @@ const state = {
   current: 0,
   cursor: {},       // cursor[stageIndex] = number of questions answered correctly (0..10)
   flash: {},
-  unlockedCount: 1  // Number of stages popped up / unlocked
+  unlockedCount: 1, // Number of stages popped up / unlocked
+  soundEnabled: true
 };
+
+/* ============================================================
+   WEB AUDIO API: Subtle Synthesizer Sound Effects
+   ============================================================ */
+let audioCtx = null;
+
+function getAudioContext() {
+  if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx && audioCtx.state === "suspended") {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+function playSound(type) {
+  if (!state.soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === "correct") {
+      // Soft pleasant chime (D5 -> A5)
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } else if (type === "wrong") {
+      // Low muted thud
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(120, now + 0.18);
+      gain.gain.setValueAtTime(0.09, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } else if (type === "complete") {
+      // Two-tone fanfare
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(523.25, now); // C5
+      osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(783.99, now + 0.15); // G5
+      gain2.gain.setValueAtTime(0.08, now + 0.15);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+      osc.start(now);
+      osc.stop(now + 0.4);
+      osc2.start(now + 0.15);
+      osc2.stop(now + 0.5);
+    }
+  } catch (e) {
+    // Graceful silent audio fallback
+  }
+}
 
 /* ============================================================
    CACHING ENGINE: Persistent Progress Storage
@@ -29,13 +110,15 @@ function loadCache() {
       if (typeof data.current === "number" && data.current >= 0 && data.current < TOTAL) {
         state.current = data.current;
       }
+      if (typeof data.soundEnabled === "boolean") {
+        state.soundEnabled = data.soundEnabled;
+      }
     }
   } catch (e) {
     console.warn("Unable to load cached progress from localStorage:", e);
   }
   updateUnlockedCount();
 
-  // Ensure current stage is within unlocked bounds
   if (state.current >= state.unlockedCount) {
     state.current = state.unlockedCount - 1;
   }
@@ -46,12 +129,11 @@ function saveCache() {
     localStorage.setItem(CACHE_KEY, JSON.stringify({
       cursor: state.cursor,
       current: state.current,
+      soundEnabled: state.soundEnabled,
       savedAt: new Date().toISOString()
     }));
-    updateCacheIndicator(true);
   } catch (e) {
     console.warn("Unable to write progress cache to localStorage:", e);
-    updateCacheIndicator(false);
   }
 }
 
@@ -70,14 +152,8 @@ function resetCache() {
     saveCache();
     renderSidebar();
     renderStage();
+    updateCertificateButton();
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-}
-
-function updateCacheIndicator(success) {
-  const badge = document.getElementById("cache-status");
-  if (badge) {
-    badge.title = success ? "Progress automatically cached in browser storage" : "Storage unavailable";
   }
 }
 
@@ -96,6 +172,14 @@ function updateUnlockedCount() {
   state.unlockedCount = Math.min(count, TOTAL);
 }
 
+function updateCertificateButton() {
+  const btn = document.getElementById("view-cert-btn");
+  const passedCount = STAGES.filter((_, i) => isPassed(i)).length;
+  if (btn) {
+    btn.style.display = passedCount === TOTAL ? "inline-flex" : "none";
+  }
+}
+
 function icons() {
   if (window.lucide) {
     window.lucide.createIcons();
@@ -104,13 +188,11 @@ function icons() {
 
 /* ============================================================
    RENDER: Sidebar with Progressive Pop-Up Stages
-   "Each section must only pop up when one is done"
    ============================================================ */
 function renderSidebar() {
   updateUnlockedCount();
   const visibleStages = STAGES.slice(0, state.unlockedCount);
 
-  // Group visible stages by tool
   const groups = {};
   visibleStages.forEach((s, i) => {
     (groups[s.tool] = groups[s.tool] || []).push(i);
@@ -139,7 +221,6 @@ function renderSidebar() {
     </div>`;
   }).join("");
 
-  // If there are locked stages waiting, show a teaser for the next stage
   if (state.unlockedCount < TOTAL) {
     const nextStage = STAGES[state.unlockedCount];
     html += `
@@ -161,6 +242,7 @@ function renderSidebar() {
   const progressPercent = Math.round((passedCount / TOTAL) * 100);
   document.getElementById("progress-fill").style.width = progressPercent + "%";
   document.getElementById("progress-label").textContent = `${passedCount} of ${TOTAL} passed`;
+  updateCertificateButton();
   icons();
 }
 
@@ -226,7 +308,7 @@ function renderStage() {
 
       <section class="block checkpoint reveal" aria-labelledby="h-check-${i}">
         <h3 id="h-check-${i}"><i data-lucide="shield-check"></i> Checkpoint (10 Questions)</h3>
-        <p class="muted small">Ten questions, one at a time. Progress is automatically saved in your browser cache. Answer each correctly to reveal the next. ${isLast ? "Passing this completes the full 20-stage curriculum." : `Passing unlocks and pops up stage ${i + 2}.`}</p>
+        <p class="muted small">Ten questions, one at a time. Press keys <kbd>1</kbd>–<kbd>4</kbd> to answer. Progress is automatically cached in your browser. Answer each correctly to reveal the next. ${isLast ? "Passing this completes the full 20-stage curriculum." : `Passing unlocks and pops up stage ${i + 2}.`}</p>
         <div id="quiz" class="quiz" aria-live="polite"></div>
       </section>
 
@@ -290,21 +372,25 @@ function renderQuiz() {
 
   if (flash) html += `<p class="status ok" role="status">${flash}</p>`;
 
-  // Render answered questions with summary badges
+  // Answered questions
   html += s.quiz.slice(0, k).map((q, qi) => `
     <div class="qdone">
       <i data-lucide="check"></i>
       <span>${qi + 1}. ${q.q} <span class="muted">— Answer: ${q.options[q.answer]}</span></span>
     </div>`).join("");
 
-  // Render current question
+  // Active question with keyboard shortcut badges
   if (!passed) {
     const q = s.quiz[k];
     html += `
       <fieldset class="qcard" id="active-q">
         <legend>${k + 1}. ${q.q}</legend>
         <div class="choices">
-          ${q.options.map((o, oi) => `<button type="button" class="choice" data-opt="${oi}">${o}</button>`).join("")}
+          ${q.options.map((o, oi) => `
+            <button type="button" class="choice" data-opt="${oi}">
+              <span>${o}</span>
+              <kbd class="choice-key">${oi + 1}</kbd>
+            </button>`).join("")}
         </div>
         <p class="feedback" aria-live="polite"></p>
       </fieldset>`;
@@ -334,8 +420,9 @@ function answer(opt, btn) {
   const fb = document.querySelector("#active-q .feedback");
 
   if (opt === q.answer) {
+    playSound("correct");
     state.cursor[i] = k + 1;
-    saveCache(); // Persist progress immediately!
+    saveCache();
 
     const isStageNowPassed = k + 1 >= N;
 
@@ -347,11 +434,13 @@ function answer(opt, btn) {
     updateNav();
 
     if (isStageNowPassed) {
+      playSound("complete");
       updateUnlockedCount();
       renderSidebar();
       triggerStagePopUp(i);
     }
   } else {
+    playSound("wrong");
     btn.classList.add("is-wrong");
     btn.disabled = true;
     fb.textContent = "Not quite. Hint: " + q.hint;
@@ -384,14 +473,238 @@ function triggerStagePopUp(completedIndex) {
   } else {
     modalTitle.textContent = `Mastery Achieved!`;
     modalDesc.innerHTML = `Incredible achievement! You have mastered all 20 stages and cleared all 200 checkpoint questions across Figma, Framer, Spline, and Stitch. Your complete product design and engineering foundation is verified.`;
-    modalBtn.innerHTML = `Review Complete Curriculum <i data-lucide="check"></i>`;
+    modalBtn.innerHTML = `View Certificate of Mastery <i data-lucide="award"></i>`;
     modalBtn.onclick = () => {
       modal.classList.add("hidden");
+      openCertificateModal();
     };
   }
 
   modal.classList.remove("hidden");
   icons();
+}
+
+/* ============================================================
+   CERTIFICATE OF MASTERY MODAL
+   ============================================================ */
+function openCertificateModal() {
+  const modal = document.getElementById("certificate-modal");
+  if (!modal) return;
+  const dateEl = document.getElementById("cert-completion-date");
+  if (dateEl) {
+    const now = new Date();
+    dateEl.textContent = `Issued on ${now.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} · 200/200 Checkpoints Passed`;
+  }
+  modal.classList.remove("hidden");
+  icons();
+}
+
+function setupCertificate() {
+  const viewBtn = document.getElementById("view-cert-btn");
+  if (viewBtn) viewBtn.addEventListener("click", openCertificateModal);
+
+  const closeBtn = document.getElementById("cert-close-btn");
+  if (closeBtn) closeBtn.addEventListener("click", () => {
+    document.getElementById("certificate-modal").classList.add("hidden");
+  });
+
+  const printBtn = document.getElementById("cert-print-btn");
+  if (printBtn) printBtn.addEventListener("click", () => {
+    window.print();
+  });
+}
+
+/* ============================================================
+   GLOBAL COMMAND PALETTE SEARCH DRAWER (⌘K / Ctrl+K)
+   ============================================================ */
+let searchIndex = [];
+
+function buildSearchIndex() {
+  searchIndex = [];
+  STAGES.forEach((s, stageIdx) => {
+    // Shortcuts
+    s.shortcuts.forEach(([k, a]) => {
+      searchIndex.push({
+        title: a,
+        desc: `Shortcut: ${k}`,
+        tool: s.tool,
+        type: "Shortcut",
+        stageIndex: stageIdx
+      });
+    });
+    // Tricks
+    s.tricks.forEach(t => {
+      searchIndex.push({
+        title: t.split(".")[0] || t.slice(0, 40),
+        desc: t,
+        tool: s.tool,
+        type: "Trick",
+        stageIndex: stageIdx
+      });
+    });
+    // Concepts
+    s.concepts.forEach(c => {
+      searchIndex.push({
+        title: c.split(".")[0] || c.slice(0, 40),
+        desc: c,
+        tool: s.tool,
+        type: "Concept",
+        stageIndex: stageIdx
+      });
+    });
+  });
+}
+
+function openCommandPalette() {
+  const modal = document.getElementById("search-modal");
+  const input = document.getElementById("cmd-search-input");
+  if (!modal || !input) return;
+
+  buildSearchIndex();
+  modal.classList.remove("hidden");
+  input.value = "";
+  renderCommandResults("");
+  input.focus();
+}
+
+function closeCommandPalette() {
+  const modal = document.getElementById("search-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function renderCommandResults(query) {
+  const container = document.getElementById("cmd-results");
+  if (!container) return;
+
+  const q = query.toLowerCase().trim();
+  const results = q ? searchIndex.filter(item =>
+    item.title.toLowerCase().includes(q) ||
+    item.desc.toLowerCase().includes(q) ||
+    item.tool.toLowerCase().includes(q)
+  ) : searchIndex.slice(0, 15);
+
+  if (results.length === 0) {
+    container.innerHTML = `<p style="padding: var(--s4); color: var(--muted); font-size: var(--fs-sm); text-align: center;">No matches found for "${query}".</p>`;
+    return;
+  }
+
+  container.innerHTML = results.map(item => `
+    <div class="cmd-item" data-stage="${item.stageIndex}">
+      <div>
+        <div class="cmd-item-title">${item.title}</div>
+        <div class="cmd-item-desc">${item.desc}</div>
+      </div>
+      <span class="cmd-item-tag">${item.tool} · ${item.type}</span>
+    </div>
+  `).join("");
+
+  container.querySelectorAll(".cmd-item").forEach(el => {
+    el.addEventListener("click", () => {
+      const stageIdx = Number(el.dataset.stage);
+      closeCommandPalette();
+      if (stageIdx < state.unlockedCount) {
+        goTo(stageIdx);
+      } else {
+        alert(`Stage ${stageIdx + 1} (${STAGES[stageIdx].tool}) is locked. Complete preceding checkpoints to unlock.`);
+      }
+    });
+  });
+}
+
+function setupCommandPalette() {
+  const searchBtn = document.getElementById("search-toggle-btn");
+  if (searchBtn) searchBtn.addEventListener("click", openCommandPalette);
+
+  const heroCmdBtn = document.getElementById("hero-cmd-btn");
+  if (heroCmdBtn) heroCmdBtn.addEventListener("click", openCommandPalette);
+
+  const searchInput = document.getElementById("cmd-search-input");
+  if (searchInput) {
+    searchInput.addEventListener("input", e => {
+      renderCommandResults(e.target.value);
+    });
+  }
+
+  const modal = document.getElementById("search-modal");
+  if (modal) {
+    modal.addEventListener("click", e => {
+      if (e.target === modal) closeCommandPalette();
+    });
+  }
+}
+
+/* ============================================================
+   KEYBOARD-DRIVEN QUIZ INPUTS & GLOBAL HOTKEYS
+   ============================================================ */
+function setupKeyboardNavigation() {
+  window.addEventListener("keydown", e => {
+    // ⌘K / Ctrl+K opens Command Palette
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      openCommandPalette();
+      return;
+    }
+
+    // Escape closes open modals
+    if (e.key === "Escape") {
+      closeCommandPalette();
+      document.getElementById("popup-modal")?.classList.add("hidden");
+      document.getElementById("certificate-modal")?.classList.add("hidden");
+      return;
+    }
+
+    // Don't intercept quiz hotkeys if typing in an input
+    const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
+    if (tag === "input" || tag === "textarea") return;
+
+    // Keys 1, 2, 3, 4 or A, B, C, D to answer active question
+    const choices = document.querySelectorAll("#active-q .choice:not(:disabled)");
+    if (choices.length > 0) {
+      let optIdx = -1;
+      if (e.key === "1" || e.key.toLowerCase() === "a") optIdx = 0;
+      else if (e.key === "2" || e.key.toLowerCase() === "b") optIdx = 1;
+      else if (e.key === "3" || e.key.toLowerCase() === "c") optIdx = 2;
+      else if (e.key === "4" || e.key.toLowerCase() === "d") optIdx = 3;
+
+      if (optIdx >= 0 && optIdx < choices.length) {
+        e.preventDefault();
+        choices[optIdx].click();
+        return;
+      }
+    }
+
+    // Arrow Left / Arrow Right for stage navigation
+    if (e.key === "ArrowLeft") {
+      if (state.current > 0) goTo(state.current - 1);
+    } else if (e.key === "ArrowRight") {
+      if (isPassed(state.current) && state.current < state.unlockedCount - 1) {
+        goTo(state.current + 1);
+      }
+    }
+  });
+}
+
+/* ============================================================
+   SOUND TOGGLE
+   ============================================================ */
+function setupSoundToggle() {
+  const btn = document.getElementById("sound-toggle-btn");
+  if (!btn) return;
+
+  const updateSoundUI = () => {
+    btn.innerHTML = `<i data-lucide="${state.soundEnabled ? "volume-2" : "volume-x"}"></i>`;
+    btn.title = state.soundEnabled ? "Audio Feedback: On" : "Audio Feedback: Muted";
+    icons();
+  };
+
+  btn.addEventListener("click", () => {
+    state.soundEnabled = !state.soundEnabled;
+    saveCache();
+    updateSoundUI();
+    if (state.soundEnabled) playSound("correct");
+  });
+
+  updateSoundUI();
 }
 
 /* ============================================================
@@ -480,7 +793,12 @@ function setupTheme() {
 document.addEventListener("DOMContentLoaded", () => {
   loadCache();
   setupTheme();
+  setupSoundToggle();
   setupBeam();
+  setupCommandPalette();
+  setupCertificate();
+  setupKeyboardNavigation();
+
   renderSidebar();
   renderStage();
 
@@ -498,7 +816,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const modal = document.getElementById("popup-modal");
   if (modal) {
-    modal.addEventListener("click", (e) => {
+    modal.addEventListener("click", e => {
       if (e.target === modal) modal.classList.add("hidden");
     });
   }
